@@ -5,8 +5,8 @@ import { EventContext, IEvent } from '#lib/events/event.interface';
 import { VideoDownloadService } from '#src/core/services/video-download/video-download.service';
 import { VIDEO_URL_REGEX } from '#common/url.regex';
 import { BotException } from '#lib/bot-exception';
-import { InjectRepository } from '#lib/database';
 import { FileEntity } from '#src/core/services/video-download/file.entity';
+import { InjectRepository } from '#lib/database/inject-repository';
 
 @singleton()
 export class MessageEvent implements IEvent<'message'> {
