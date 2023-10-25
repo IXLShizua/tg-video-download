@@ -1,0 +1,46 @@
+{
+  "name": "project-template",
+  "version": "1.0.0",
+  "description": "My project template",
+  "author": "IXLShizua",
+  "type": "module",
+  "scripts": {
+    "start": "node ./dist/main.js",
+    "build": "tsc",
+    "tsc:watch": "tsc --watch",
+    "nodemon:watch": "nodemon ./dist/main.js",
+    "dev": "concurrently -p \"[{name}]\" -n \"TSC,Nodemon\" -c \"bgBlue.bold,bgGreen.bold\" \"yarn tsc:watch\" \"yarn nodemon:watch\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "env-var": "^7.4.1",
+    "form-data": "^4.0.0",
+    "got": "^13.0.0",
+    "reflect-metadata": "^0.1.13",
+    "sqlite3": "^5.1.6",
+    "telegraf": "^4.14.0",
+    "tslib": "^2.6.2",
+    "tsyringe": "^4.8.0",
+    "typeorm": "^0.3.17"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.7",
+    "@typescript-eslint/eslint-plugin": "^6.8.0",
+    "@typescript-eslint/parser": "^6.8.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.52.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-prettier": "^5.0.1",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  },
+  "imports": {
+    "#src/*": "./dist/*.js",
+    "#lib/*": "./dist/lib/*.js",
+    "#common/*": "./dist/common/*.js"
+  }
+}
