@@ -6,5 +6,5 @@ export type CommandContext = Context<Update.MessageUpdate<Message.TextMessage>>;
 export interface ICommand {
   readonly COMMAND_NAME: string;
 
-  execute(ctx: CommandContext): Promise<any>;
+  execute(ctx: CommandContext): any | Promise<any>;
 }

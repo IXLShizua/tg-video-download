@@ -10,5 +10,5 @@ export type EventContext<Event extends UpdateType | Guard<Context['update']>> =
 export interface IEvent<Filter extends UpdateType | Guard<Context['update']>> {
   readonly EVENT_NAME: Filter;
 
-  execute(ctx: EventContext<Filter>): Promise<void>;
+  execute(ctx: EventContext<Filter>): any | Promise<void>;
 }

@@ -3,7 +3,8 @@ import { Telegraf } from 'telegraf';
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
 import { ICommand } from '#lib/commands/command.interface';
-import { BotException } from '#lib/bot-exception';
+import { replyToCtxError } from '#lib/exceptions/reply-ctx-error';
+import { isAsyncFunction } from '#common/is-async-function';
 
 @singleton()
 export class CommandsHandler {
@@ -15,15 +16,17 @@ export class CommandsHandler {
 
     for (const command of commands) {
       botInstance.command(command.COMMAND_NAME, (ctx) => {
-        command.execute
-          .bind(command, ctx)()
-          .catch((e) => {
-            if (e instanceof BotException) {
-              return void ctx.replyWithHTML(`<b>Ошибка:</b> ${e.reason}`);
-            } else {
-              return void ctx.replyWithHTML(`<b>Произошла ошибка.</b>`);
-            }
-          });
+        const bindedFn = command.execute.bind(command, ctx);
+
+        if (isAsyncFunction(bindedFn)) {
+          bindedFn().catch((error: unknown) => replyToCtxError(ctx, error));
+        } else {
+          try {
+            bindedFn();
+          } catch (error: unknown) {
+            replyToCtxError(ctx, error);
+          }
+        }
       });
     }
   }

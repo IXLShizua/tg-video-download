@@ -3,7 +3,8 @@ import { Telegraf } from 'telegraf';
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
 import { IEvent } from '#lib/events/event.interface';
-import { BotException } from '#lib/bot-exception';
+import { replyToCtxError } from '#lib/exceptions/reply-ctx-error';
+import { isAsyncFunction } from '#common/is-async-function';
 
 @singleton()
 export class EventsHandler {
@@ -12,19 +13,17 @@ export class EventsHandler {
 
     for (const event of events) {
       botInstance.on(event.EVENT_NAME, (ctx) => {
-        event.execute
-          .bind(event, ctx)()
-          .catch((e) => {
-            if (e instanceof BotException) {
-              return void ctx.replyWithHTML(`<b>Ошибка:</b> ${e.reason}`);
-            } else if (typeof e === 'string') {
-              return void ctx.replyWithHTML(`<b>Ошибка:</b> ${e}`);
-            } else {
-              return void ctx.replyWithHTML(
-                `<b>Произошла непредвиденная ошибка.</b>`,
-              );
-            }
-          });
+        const bindedFn = event.execute.bind(event, ctx);
+
+        if (isAsyncFunction(bindedFn)) {
+          bindedFn().catch((error: unknown) => replyToCtxError(ctx, error));
+        } else {
+          try {
+            bindedFn();
+          } catch (error: unknown) {
+            replyToCtxError(ctx, error);
+          }
+        }
       });
     }
   }
