@@ -1,18 +1,60 @@
 import { singleton } from 'tsyringe';
 import FormData from 'form-data';
 import { got } from 'got';
+import { Input } from 'telegraf';
+import { Repository } from 'typeorm';
 import { Buffer } from 'buffer';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import * as fs from 'fs';
 import { rm } from 'fs/promises';
 import { envConfig } from '#common/env.config';
 import { EventContext } from '#lib/events/event.interface';
+import { BotException } from '#src/lib/exceptions/bot-exception';
+import { InjectRepository } from '#src/lib/database/inject-repository';
+import { FileEntity } from './file.entity.js';
 
 @singleton()
 export class VideoDownloadService {
   private readonly requestsToDownload: Set<string> = new Set<string>();
 
-  downloadVideoBuffer(
+  constructor(
+    @InjectRepository(FileEntity)
+    private readonly filesRepository: Repository<FileEntity>,
+  ) {}
+
+  async downloadVideo(
+    ctx: EventContext<'message'>,
+    url: string,
+  ): Promise<void> {
+    if (
+      url.startsWith('https://zen.yandex.ru/') ||
+      url.startsWith('https://dzen.ru/')
+    ) {
+      url = await this.getZenManifestURL(url);
+    }
+
+    const existFile = await this.filesRepository.findOne({
+      where: { url: ctx.message.text },
+    });
+
+    if (existFile) {
+      return ctx.replyWithVideo(Input.fromFileId(existFile.file_id));
+    }
+
+    const video = await this.downloadVideoBuffer(ctx, url);
+
+    const fileId = await this.sendRequestWithVideoStream(
+      ctx.message.chat.id,
+      video.filename,
+    );
+
+    await this.filesRepository.save({
+      url: ctx.message.text,
+      file_id: fileId,
+    });
+  }
+
+  private downloadVideoBuffer(
     ctx: EventContext<'message'>,
     url: string,
   ): Promise<{ filename: string }> {
@@ -20,7 +62,9 @@ export class VideoDownloadService {
       const username = ctx.message.from.username!;
 
       if (this.requestsToDownload.has(username)) {
-        return reject('Ваш запрос уже находится в обработке.');
+        return reject(
+          new BotException('Ваш запрос уже находится в обработке.'),
+        );
       } else {
         this.requestsToDownload.add(username);
       }
@@ -36,17 +80,21 @@ export class VideoDownloadService {
 
       ytDlpProcess.stdout.pipe(writable);
 
-      ytDlpProcess.stderr.on('data', async (data: Buffer) => {
+      ytDlpProcess.stderr.on('data', (data: Buffer) => {
         const decodedData = data.toString();
 
         if (decodedData.includes('does not pass filter (!is_live)')) {
           return reject(
-            'Скачивание стримов (прямых трансляций) не поддерживается.',
+            new BotException(
+              'Скачивание стримов (прямых трансляций) не поддерживается.',
+            ),
           );
         }
 
         if (decodedData.includes('Unsupported URL')) {
-          return reject('Этот URL неверный или не поддерживается.');
+          return reject(
+            new BotException('Этот URL неверный или не поддерживается.'),
+          );
         }
       });
 
@@ -54,7 +102,9 @@ export class VideoDownloadService {
         if (code === 0) {
           resolve({ filename });
         } else {
-          reject('Произошла ошибка при обработке данного видео.');
+          reject(
+            new BotException('Произошла ошибка при обработке данного видео.'),
+          );
         }
 
         this.requestsToDownload.delete(username);
@@ -63,7 +113,7 @@ export class VideoDownloadService {
     });
   }
 
-  async getZenManifestURL(videoURL: string): Promise<string> {
+  private async getZenManifestURL(videoURL: string): Promise<string> {
     const videoPageResponse = await fetch(videoURL, { method: 'POST' });
     const videoPageBody = await videoPageResponse.text();
 
@@ -92,7 +142,7 @@ export class VideoDownloadService {
     return buildedURLArr.join('');
   }
 
-  async sendRequestWithVideoStream(
+  private async sendRequestWithVideoStream(
     chatId: string,
     filename: string,
   ): Promise<string> {

@@ -39,6 +39,7 @@
   },
   "imports": {
     "#src/*": "./dist/*.js",
+    "#core/*": "./dist/core/*.js",
     "#lib/*": "./dist/lib/*.js",
     "#common/*": "./dist/common/*.js"
   }

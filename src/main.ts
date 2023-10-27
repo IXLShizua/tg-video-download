@@ -1,10 +1,11 @@
 import 'reflect-metadata';
 import { container } from 'tsyringe';
 import { spawn } from 'child_process';
+import { App } from '#core/app';
 import { envConfig } from '#common/env.config';
 import { createStorage } from '#common/create-storage';
 import { createDatabase } from '#common/create-database';
-import { App } from '#src/core/app';
+import { GlobalLogger } from '#common/logger/logger';
 
 async function main(): Promise<void> {
   await createStorage();
@@ -16,7 +17,7 @@ async function main(): Promise<void> {
   app.enableShutdownHooks();
 
   await app.started.then((botInfo) =>
-    console.log(`Bot started on https://t.me/${botInfo.username}`),
+    GlobalLogger.info(`Bot started on https://t.me/${botInfo.username}.`),
   );
 
   spawn('./telegram-bot-api', [

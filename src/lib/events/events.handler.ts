@@ -1,13 +1,15 @@
 import { container, singleton } from 'tsyringe';
 import { Telegraf } from 'telegraf';
-import { readdirSync } from 'fs';
 import { resolve } from 'path';
+import { readdir } from 'fs/promises';
 import { IEvent } from '#lib/events/event.interface';
-import { replyToCtxError } from '#lib/exceptions/reply-ctx-error';
-import { isAsyncFunction } from '#common/is-async-function';
+import { catchCtxError } from '#lib/exceptions/catch-ctx-error';
+import { Logger } from '#src/common/logger/logger';
 
 @singleton()
 export class EventsHandler {
+  private readonly logger = new Logger('EventsHandler');
+
   async setupEvents(botInstance: Telegraf, eventsDir: string): Promise<void> {
     const events = await this.buildEvents(eventsDir);
 
@@ -15,33 +17,31 @@ export class EventsHandler {
       botInstance.on(event.EVENT_NAME, (ctx) => {
         const bindedFn = event.execute.bind(event, ctx);
 
-        if (isAsyncFunction(bindedFn)) {
-          bindedFn().catch((error: unknown) => replyToCtxError(ctx, error));
-        } else {
-          try {
-            bindedFn();
-          } catch (error: unknown) {
-            replyToCtxError(ctx, error);
-          }
-        }
+        catchCtxError(bindedFn, ctx);
       });
     }
+
+    this.logger.info('All events initialized.');
   }
 
   private async buildEvents(eventsDir: string): Promise<IEvent<any>[]> {
-    const events = readdirSync(eventsDir)
-      .filter((el) => el.endsWith('.event.js'))
-      .map((el) => resolve(process.cwd(), eventsDir, el));
+    const rawFiles = await readdir(eventsDir, {
+      recursive: true,
+      withFileTypes: true,
+    });
 
-    const resolvedEvents: IEvent<any>[] = [];
+    return await Promise.all(
+      rawFiles
+        .filter((el) => !el.isDirectory() && el.name.endsWith('.event.js'))
+        .map(async (el) => {
+          const importedClass = await import(
+            resolve(process.cwd(), eventsDir, el.name)
+          );
 
-    for (const event of events) {
-      const importedClass = await import(event);
-      const className = Object.keys(importedClass)[0]!;
+          const className = Object.keys(importedClass)[0]!;
 
-      resolvedEvents.push(container.resolve(importedClass[className]));
-    }
-
-    return resolvedEvents;
+          return container.resolve(importedClass[className]);
+        }),
+    );
   }
 }

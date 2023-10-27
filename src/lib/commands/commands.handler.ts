@@ -1,13 +1,15 @@
 import { container, singleton } from 'tsyringe';
 import { Telegraf } from 'telegraf';
-import { readdirSync } from 'fs';
 import { resolve } from 'path';
+import { readdir } from 'fs/promises';
 import { ICommand } from '#lib/commands/command.interface';
-import { replyToCtxError } from '#lib/exceptions/reply-ctx-error';
-import { isAsyncFunction } from '#common/is-async-function';
+import { catchCtxError } from '#lib/exceptions/catch-ctx-error';
+import { Logger } from '#src/common/logger/logger';
 
 @singleton()
 export class CommandsHandler {
+  private readonly logger = new Logger('CommandsHandler');
+
   async setupCommands(
     botInstance: Telegraf,
     commandsDir: string,
@@ -18,33 +20,31 @@ export class CommandsHandler {
       botInstance.command(command.COMMAND_NAME, (ctx) => {
         const bindedFn = command.execute.bind(command, ctx);
 
-        if (isAsyncFunction(bindedFn)) {
-          bindedFn().catch((error: unknown) => replyToCtxError(ctx, error));
-        } else {
-          try {
-            bindedFn();
-          } catch (error: unknown) {
-            replyToCtxError(ctx, error);
-          }
-        }
+        catchCtxError(bindedFn, ctx);
       });
     }
+
+    this.logger.info('All commands initialized.');
   }
 
   private async buildCommands(commandsDir: string): Promise<ICommand[]> {
-    const commands = readdirSync(commandsDir)
-      .filter((el) => el.endsWith('.command.js'))
-      .map((el) => resolve(process.cwd(), commandsDir, el));
+    const rawFiles = await readdir(commandsDir, {
+      recursive: true,
+      withFileTypes: true,
+    });
 
-    const resolvedCommands: ICommand[] = [];
+    return await Promise.all(
+      rawFiles
+        .filter((el) => !el.isDirectory && el.name.endsWith('.command.js'))
+        .map(async (el) => {
+          const importedClass = await import(
+            resolve(process.cwd(), commandsDir, el.name)
+          );
 
-    for (const command of commands) {
-      const importedClass = await import(command);
-      const className = Object.keys(importedClass)[0]!;
+          const className = Object.keys(importedClass)[0]!;
 
-      resolvedCommands.push(container.resolve(importedClass[className]));
-    }
-
-    return resolvedCommands;
+          return container.resolve(importedClass[className]);
+        }),
+    );
   }
 }
