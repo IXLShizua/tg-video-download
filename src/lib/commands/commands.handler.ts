@@ -35,7 +35,7 @@ export class CommandsHandler {
 
     return await Promise.all(
       rawFiles
-        .filter((el) => !el.isDirectory && el.name.endsWith('.command.js'))
+        .filter((el) => !el.isDirectory() && el.name.endsWith('.command.js'))
         .map(async (el) => {
           const importedClass = await import(
             resolve(process.cwd(), commandsDir, el.name)
