@@ -15,7 +15,10 @@ import { FileEntity } from './file.entity.js';
 
 @singleton()
 export class VideoDownloadService {
-  private readonly requestsToDownload: Set<string> = new Set<string>();
+  private readonly requestsToDownload: Map<string, AbortController> = new Map<
+    string,
+    AbortController
+  >();
 
   constructor(
     @InjectRepository(FileEntity)
@@ -54,6 +57,16 @@ export class VideoDownloadService {
     });
   }
 
+  cancelDownload(username: string): void {
+    const request = this.requestsToDownload.get(username);
+
+    if (!request) {
+      throw new BotException('У Вас нет активных запросов на скачивание.');
+    }
+
+    request.abort('AbortDownload');
+  }
+
   private downloadVideoBuffer(
     ctx: EventContext<'message'>,
     url: string,
@@ -61,26 +74,36 @@ export class VideoDownloadService {
     return new Promise<{ filename: string }>(async (resolve, reject) => {
       const username = ctx.message.from.username!;
 
+      let abortController: AbortController;
+
       if (this.requestsToDownload.has(username)) {
         return reject(
           new BotException('Ваш запрос уже находится в обработке.'),
         );
       } else {
-        this.requestsToDownload.add(username);
+        abortController = new AbortController();
+
+        this.requestsToDownload.set(username, abortController);
       }
 
       const firstMessageInfo = await ctx.reply(
         'Ваш запрос добавлен в очередь. Ожидайте.',
       );
 
-      const ytDlpProcess = this.spawnYtDlpProcess(url);
+      const ytDlp = this.spawnYtDlpProcess(url, abortController);
 
       const filename = `./storage/${username}-${Date.now()}`;
       const writable = fs.createWriteStream(filename);
 
-      ytDlpProcess.stdout.pipe(writable);
+      ytDlp.stdout.pipe(writable);
 
-      ytDlpProcess.stderr.on('data', (data: Buffer) => {
+      ytDlp.on('error', (err) => {
+        if (err.cause !== 'AbortDownload') {
+          throw err;
+        }
+      });
+
+      ytDlp.stderr.on('data', (data: Buffer) => {
         const decodedData = data.toString();
 
         if (decodedData.includes('does not pass filter (!is_live)')) {
@@ -98,9 +121,11 @@ export class VideoDownloadService {
         }
       });
 
-      ytDlpProcess.on('close', async (code) => {
+      ytDlp.on('close', (code, signal) => {
         if (code === 0) {
           resolve({ filename });
+        } else if (code === null && signal === 'SIGTERM' && ytDlp.killed) {
+          reject(new BotException('Загрузка видео успешно отменена.'));
         } else {
           reject(
             new BotException('Произошла ошибка при обработке данного видео.'),
@@ -108,7 +133,7 @@ export class VideoDownloadService {
         }
 
         this.requestsToDownload.delete(username);
-        await ctx.deleteMessage(firstMessageInfo.message_id);
+        ctx.deleteMessage(firstMessageInfo.message_id);
       });
     });
   }
@@ -169,20 +194,29 @@ export class VideoDownloadService {
     return res?.result?.video?.file_id;
   }
 
-  private spawnYtDlpProcess(url: string): ChildProcessWithoutNullStreams {
-    return spawn('yt-dlp', [
-      url,
-      '-o',
-      '-',
-      '--no-playlist',
-      '--abort-on-error',
-      '--max-filesize',
-      '1999M',
-      '--verbose',
-      '--quiet',
-      '--progress',
-      '--match-filter',
-      '!is_live',
-    ]);
+  private spawnYtDlpProcess(
+    url: string,
+    abortController: AbortController,
+  ): ChildProcessWithoutNullStreams {
+    return spawn(
+      'yt-dlp',
+      [
+        url,
+        '-o',
+        '-',
+        '--no-playlist',
+        '--abort-on-error',
+        '--max-filesize',
+        '1999M',
+        '--verbose',
+        '--quiet',
+        '--progress',
+        '--match-filter',
+        '!is_live',
+      ],
+      {
+        signal: abortController.signal,
+      },
+    );
   }
 }

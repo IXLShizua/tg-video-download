@@ -12,15 +12,27 @@ export class Logger implements LoggerType {
   constructor(private readonly prefix: string) {}
 
   info(...text: any[]): void {
-    console.log(this.getLogPrefix(LogType.Info), ...text);
+    console.log(
+      this.getLogPrefix(LogType.Info),
+      ...text,
+      AnsiLoggerColors.White,
+    );
   }
 
   warn(...text: any[]): void {
-    console.log(this.getLogPrefix(LogType.Warn), ...text);
+    console.log(
+      this.getLogPrefix(LogType.Warn),
+      ...text,
+      AnsiLoggerColors.White,
+    );
   }
 
   error(...text: any[]): void {
-    console.log(this.getLogPrefix(LogType.Error), ...text);
+    console.log(
+      this.getLogPrefix(LogType.Error),
+      ...text,
+      AnsiLoggerColors.White,
+    );
   }
 
   private getLogPrefix(type: LogType): string {
