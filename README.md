@@ -9,10 +9,11 @@
   - VK | VK Clips
   - Yandex Zen
 
-# Установка
 ## Требования:
-### NodeJS >= 18.18.0
+- NodeJS >= 18.18.0 (https://nodejs.org/en)
+- yt-dlp (https://github.com/yt-dlp/yt-dlp)
 
+# Установка
 Для установки всех зависимостей:
 ```
 npm install
