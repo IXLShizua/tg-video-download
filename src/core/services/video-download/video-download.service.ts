@@ -90,7 +90,7 @@ export class VideoDownloadService {
         'Ваш запрос добавлен в очередь. Ожидайте.',
       );
 
-      const ytDlp = this.spawnYtDlpProcess(url, abortController);
+      const ytDlp = this.spawnYtDlpProcess(url, abortController.signal);
 
       const filename = `./storage/${username}-${Date.now()}`;
       const writable = fs.createWriteStream(filename);
@@ -196,7 +196,7 @@ export class VideoDownloadService {
 
   private spawnYtDlpProcess(
     url: string,
-    abortController: AbortController,
+    abortSignal: AbortSignal,
   ): ChildProcessWithoutNullStreams {
     return spawn(
       'yt-dlp',
@@ -215,7 +215,7 @@ export class VideoDownloadService {
         '!is_live',
       ],
       {
-        signal: abortController.signal,
+        signal: abortSignal,
       },
     );
   }
