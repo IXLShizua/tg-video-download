@@ -14,6 +14,10 @@
 - yt-dlp (https://github.com/yt-dlp/yt-dlp)
 
 # Установка
+### Заполнить .env.example и переименовать его в .env
+- BOT_TOKEN - токен бота.
+- API_ID и API_HASH - читать [тут](https://core.telegram.org/api/obtaining_api_id)
+
 Для установки всех зависимостей:
 ```
 npm install
