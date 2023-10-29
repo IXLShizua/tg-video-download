@@ -132,6 +132,7 @@ export class VideoDownloadService {
           );
         }
 
+        rm(filename).catch(() => {});
         this.requestsToDownload.delete(username);
         ctx.deleteMessage(firstMessageInfo.message_id);
       });
@@ -184,12 +185,7 @@ export class VideoDownloadService {
         body: formData,
         headers: formData.getHeaders(),
       })
-      .json()
-      .then((data) => {
-        rm(filename);
-
-        return data;
-      })) as { result: { video: { file_id: string } } };
+      .json()) as { result: { video: { file_id: string } } };
 
     return res?.result?.video?.file_id;
   }
