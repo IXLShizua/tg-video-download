@@ -10,11 +10,12 @@
   - Yandex Zen
 
 ## Требования:
-- NodeJS >= 18.18.0 (https://nodejs.org/en)
+- Linux
+- NodeJS 18.18.0 (https://nodejs.org/en)
 - yt-dlp (https://github.com/yt-dlp/yt-dlp)
 
 # Установка
-### Заполнить .env.example и переименовать его в .env
+#### Заполнить .env.example и переименовать его в .env
 - BOT_TOKEN - токен бота.
 - API_ID и API_HASH - читать [тут](https://core.telegram.org/api/obtaining_api_id)
 
