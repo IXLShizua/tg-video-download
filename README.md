@@ -1,5 +1,6 @@
 # Telegram Bot for video download
 Телеграм бот, позволяющий скачивать видео из ютуба, вк и яндекс дзен.
+Попробовать бота можно [здесь](https://t.me/linelyyy_bot).
 
 # Особенности
 - Бот может взаимодействовать сразу с большим количеством людей
@@ -17,7 +18,7 @@
 # Установка
 #### Заполнить .env.example и переименовать его в .env
 - BOT_TOKEN - токен бота.
-- API_ID и API_HASH - читать [тут](https://core.telegram.org/api/obtaining_api_id)
+- API_ID и API_HASH - читать [тут](https://core.telegram.org/api/obtaining_api_id).
 
 Для установки всех зависимостей:
 ```
