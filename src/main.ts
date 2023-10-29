@@ -25,7 +25,10 @@ async function main(): Promise<void> {
     envConfig.telegramBotApi.id,
     '--api-hash',
     envConfig.telegramBotApi.hash,
-  ]);
+  ]).on('error', (err) => {
+    GlobalLogger.error(err);
+    process.exit(1);
+  });
 }
 
 void main();
