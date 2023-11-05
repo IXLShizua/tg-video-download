@@ -7,6 +7,8 @@ import { Buffer } from 'buffer';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import * as fs from 'fs';
 import { rm } from 'fs/promises';
+import { resolve } from 'path';
+import * as process from 'process';
 import { envConfig } from '#common/env.config';
 import { EventContext } from '#lib/events/event.interface';
 import { BotException } from '#src/lib/exceptions/bot-exception';
@@ -29,13 +31,6 @@ export class VideoDownloadService {
     ctx: EventContext<'message'>,
     url: string,
   ): Promise<void> {
-    if (
-      url.startsWith('https://zen.yandex.ru/') ||
-      url.startsWith('https://dzen.ru/')
-    ) {
-      url = await this.getZenManifestURL(url);
-    }
-
     const existFile = await this.filesRepository.findOne({
       where: { url: ctx.message.text },
     });
@@ -105,7 +100,7 @@ export class VideoDownloadService {
 
       ytDlp.stderr.on('data', (data: Buffer) => {
         const decodedData = data.toString();
-
+        console.log(decodedData);
         if (decodedData.includes('does not pass filter (!is_live)')) {
           return reject(
             new BotException(
@@ -139,35 +134,6 @@ export class VideoDownloadService {
     });
   }
 
-  private async getZenManifestURL(videoURL: string): Promise<string> {
-    const videoPageResponse = await fetch(videoURL, { method: 'POST' });
-    const videoPageBody = await videoPageResponse.text();
-
-    const buildedURLArr: string[] = [];
-
-    let mpdFileURLIndex = videoPageBody.indexOf('manifest.mpd');
-    let mpdFileURLIndexSecond = mpdFileURLIndex + 1;
-
-    let currentSymbolFirst: string = '';
-    let currentSymbolSecond: string = '';
-
-    while (videoPageBody[mpdFileURLIndex] !== '"') {
-      currentSymbolFirst = videoPageBody[mpdFileURLIndex]!;
-
-      buildedURLArr.unshift(currentSymbolFirst);
-      mpdFileURLIndex--;
-    }
-
-    while (videoPageBody[mpdFileURLIndexSecond] !== '"') {
-      currentSymbolSecond = videoPageBody[mpdFileURLIndexSecond]!;
-
-      buildedURLArr.push(currentSymbolSecond);
-      mpdFileURLIndexSecond++;
-    }
-
-    return buildedURLArr.join('');
-  }
-
   private async sendRequestWithVideoStream(
     chatId: string,
     filename: string,
@@ -195,7 +161,7 @@ export class VideoDownloadService {
     abortSignal: AbortSignal,
   ): ChildProcessWithoutNullStreams {
     return spawn(
-      'yt-dlp',
+      resolve(process.cwd(), 'yt-dlp'),
       [
         url,
         '-o',
@@ -204,7 +170,6 @@ export class VideoDownloadService {
         '--abort-on-error',
         '--max-filesize',
         '1999M',
-        '--verbose',
         '--quiet',
         '--progress',
         '--match-filter',
