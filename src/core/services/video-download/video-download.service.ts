@@ -100,7 +100,7 @@ export class VideoDownloadService {
 
       ytDlp.stderr.on('data', (data: Buffer) => {
         const decodedData = data.toString();
-        console.log(decodedData);
+
         if (decodedData.includes('does not pass filter (!is_live)')) {
           return reject(
             new BotException(
