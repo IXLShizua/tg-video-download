@@ -20,7 +20,7 @@ async function main(): Promise<void> {
     GlobalLogger.info(`Bot started on https://t.me/${botInfo.username}.`),
   );
 
-  spawn('./telegram-bot-api', [
+  spawn('./bins/telegram-bot-api', [
     '--api-id',
     envConfig.telegramBotApi.id,
     '--api-hash',

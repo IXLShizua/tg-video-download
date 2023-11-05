@@ -161,7 +161,7 @@ export class VideoDownloadService {
     abortSignal: AbortSignal,
   ): ChildProcessWithoutNullStreams {
     return spawn(
-      resolve(process.cwd(), 'yt-dlp'),
+      resolve(process.cwd(), 'bins', 'yt-dlp'),
       [
         url,
         '-o',

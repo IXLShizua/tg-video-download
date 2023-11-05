@@ -14,7 +14,7 @@
 ## Требования:
 - Linux
 - NodeJS 18.18.0 (https://nodejs.org/en)
-- yt-dlp (https://github.com/yt-dlp/yt-dlp)
+- FFmpeg и FFprobe (https://www.ffmpeg.org/)
 
 # Установка
 #### Заполнить .env.example и переименовать его в .env
